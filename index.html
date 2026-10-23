@@ -44,6 +44,24 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--acc);flex:none}
 .addc{vertical-align:middle;text-align:center;min-width:90px;border-right:0}
 .num,.tm{font:inherit;background:var(--inp);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:100%}.num{text-align:center;margin-top:4px}.tl{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:13px;margin-bottom:8px}.tm{width:auto;flex:1}
 .dl{font-weight:600;margin-bottom:2px}.today{box-shadow:inset 0 3px 0 var(--acc)}
+.strip{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 2px 10px;position:sticky;top:0;background:var(--bg);z-index:5}
+.chip{flex:none;width:54px;padding:8px 0;text-align:center;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg);font:inherit}
+.chip small{display:block;color:var(--mut);font-size:11px;text-transform:uppercase}
+.chip b{font-size:18px}
+.chip.td:not(.sel){border-color:var(--acc)}
+.chip.dn b::after{content:"✓";color:var(--ok);font-size:12px;margin-left:2px}
+.chip.sel{background:var(--acc);border-color:var(--acc);color:#fff}
+.chip.sel small,.chip.sel b::after{color:#fff}
+.mday{display:flex;justify-content:space-between;align-items:center;font-size:19px;font-weight:700;margin:4px 2px 12px}
+.mc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:12px}
+.mc.closed{background:var(--okbg)}
+.mh{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.mh .nm{flex:1;margin:0;font-size:18px}
+.mh .tm{width:112px;flex:none}
+.mc .row{display:flex;align-items:center;gap:14px;padding:13px 4px;border-top:1px solid var(--line);font-size:17px;cursor:pointer}
+.mc .row input{width:26px;height:26px}
+.mc .row.done span{text-decoration:line-through;color:var(--mut)}
+.mc>.x{margin-top:6px}
 .empty{color:var(--mut);text-align:center;padding:40px 0}
 #panel{display:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px}
 #panel.on{display:block}
@@ -56,9 +74,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--acc);flex:none}
   <header>
     <h1>Трекер YouTube</h1>
     <span class="status" id="status"></span>
-    <button id="bSteps" data-act="steps">Этапы</button>
-    <button data-act="export">Копия</button>
-    <button data-act="import">Восстановить</button>
+    <button id="bSteps" data-act="steps">⚙ Настройки</button>
     <button class="pri" data-act="addniche">+ Ниша</button>
   </header>
   <div id="panel"></div>
@@ -73,7 +89,7 @@ var uid=function(){return Math.random().toString(36).slice(2,9)};
 var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})};
 var clone=function(o){return JSON.parse(JSON.stringify(o))};
 function iso(d){return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)}
-var ahead=14,scrolled=false;
+var ahead=14,scrolled=false,sel="",rc=true,mob=window.matchMedia("(max-width:700px)"),WD=["вс","пн","вт","ср","чт","пт","сб"],WF=["воскресенье","понедельник","вторник","среда","четверг","пятница","суббота"],MN=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
 function addDays(s,k){var d=new Date(s+"T12:00:00");d.setDate(d.getDate()+k);return iso(d)}
 function range(n){var t=iso(new Date()),ks=Object.keys(n.days||{}).sort(),a=addDays(t,-3),b=addDays(t,ahead);if(ks.length){if(ks[0]<a)a=ks[0];if(ks[ks.length-1]>b)b=ks[ks.length-1]}var r=[],c=a,g=0;while(c<=b&&g++<800){r.push(c);c=addDays(c,1)}return r}
 function day(n,d){n.days=n.days||{};return n.days[d]||(n.days[d]={done:false,c:{}})}
@@ -91,11 +107,12 @@ function saveSteps(){
 }
 function setStatus(t){$("#status").textContent=t}
 
-function render(){
+function render(){if(mob.matches)renderMobile();else renderTable()}
+function renderTable(){
   var ae=document.activeElement;if(ae&&(ae.isContentEditable||(ae.classList&&(ae.classList.contains("num")||ae.classList.contains("tm"))))){pending=true;return}
   pending=false;
   var ids=Object.keys(niches).sort(function(a,b){return niches[a].order-niches[b].order});
-  var el=$("#list"),sl=[].map.call(el.querySelectorAll(".card"),function(c){return c.scrollLeft});
+  var y=window.scrollY,el=$("#list"),sl=[].map.call(el.querySelectorAll(".card"),function(c){return c.scrollLeft});
   if(!ids.length){el.innerHTML='<p class="empty">Пока нет ниш. Нажмите «+ Ниша».</p>';return}
   el.innerHTML=ids.map(function(id){
     var n=niches[id],days=n.days||{},ds=range(n),T=iso(new Date());
@@ -116,15 +133,46 @@ function render(){
       '<button class="x" data-act="delniche" data-n="'+id+'">'+(armed==="n"+id?"Точно удалить?":"Удалить нишу")+'</button></th>'+heads+
       '<td class="addc" rowspan="2"><button data-act="adddate" data-n="'+id+'">+7 дней</button></td></tr><tr>'+body+'</tr></table></section>';
   }).join("");
-  [].forEach.call(el.querySelectorAll(".card"),function(c,i){if(scrolled&&sl[i]!=null)c.scrollLeft=sl[i];else{var t=c.querySelector(".dh.today");if(t)c.scrollLeft=Math.max(0,t.offsetLeft-190)}});
-  scrolled=true;
+  [].forEach.call(el.querySelectorAll(".card"),function(c,i){if(scrolled&&sl[i]!=null)c.scrollLeft=sl[i];else{var t=c.querySelector(".dh.today");if(t)c.scrollLeft=Math.max(0,c.scrollLeft+t.getBoundingClientRect().left-c.getBoundingClientRect().left-150)}});
+  scrolled=true;window.scrollTo(0,y);
+}
+
+function renderMobile(){
+  var ae=document.activeElement;if(ae&&(ae.isContentEditable||(ae.classList&&(ae.classList.contains("num")||ae.classList.contains("tm"))))){pending=true;return}
+  pending=false;
+  var y=window.scrollY,el=$("#list"),T=iso(new Date()),old=el.querySelector(".strip"),ss=old?old.scrollLeft:null;
+  if(!sel)sel=T;
+  var ids=Object.keys(niches).sort(function(a,b){return niches[a].order-niches[b].order});
+  var a0=addDays(T,-10),b0=addDays(T,ahead);if(sel<a0)a0=sel;if(sel>b0)b0=sel;
+  var chips="",g=0;
+  for(var c=a0;c<=b0&&g++<400;c=addDays(c,1)){
+    var xd=new Date(c+"T12:00:00"),dn=ids.length&&ids.every(function(i){var q=(niches[i].days||{})[c];return q&&q.done});
+    chips+='<button class="chip'+(c===sel?' sel':'')+(c===T?' td':'')+(dn?' dn':'')+'" data-act="pick" data-d="'+c+'"><small>'+WD[xd.getDay()]+'</small><b>'+c.slice(8)+'</b></button>';
+  }
+  chips+='<button class="chip" data-act="adddate"><small>ещё</small><b>+7</b></button>';
+  var sx=new Date(sel+"T12:00:00");
+  var head='<div class="mday"><span>'+WF[sx.getDay()]+', '+parseInt(sel.slice(8),10)+' '+MN[sx.getMonth()]+'</span>'+(sel!==T?'<button data-act="today">Сегодня</button>':'')+'</div>';
+  var cards=ids.length?ids.map(function(id){
+    var n=niches[id],x=(n.days||{})[sel]||{done:false,c:{}},cc=x.c||{},k=steps.filter(function(s){return cc[s.id]}).length,a='data-n="'+id+'" data-d="'+sel+'"';
+    return '<section class="mc'+(x.done?' closed':'')+'"><div class="mh"><div class="nm" contenteditable="true" spellcheck="false" data-act="rename" data-n="'+id+'">'+esc(n.name)+'</div>'+
+      '<input class="tm" type="time" data-act="time" data-n="'+id+'" value="'+esc(n.time||'')+'"></div>'+
+      '<input class="num" type="text" placeholder="№ ролика" value="'+esc(x.num||'')+'" data-act="num" '+a+'>'+
+      steps.map(function(s){return '<label class="row'+(cc[s.id]?' done':'')+'"><input type="checkbox" data-act="step" '+a+' data-s="'+s.id+'"'+(cc[s.id]?' checked':'')+'><span>'+esc(s.name)+'</span></label>'}).join("")+
+      '<label class="row"><input type="checkbox" data-act="close" '+a+(x.done?' checked':'')+'><span><b>День закрыт</b> · '+k+'/'+steps.length+'</span></label>'+
+      '<button class="x" data-act="delniche" data-n="'+id+'">'+(armed==="n"+id?"Точно удалить?":"Удалить нишу")+'</button></section>';
+  }).join(""):'<p class="empty">Пока нет ниш. Нажмите «+ Ниша».</p>';
+  el.innerHTML='<div class="strip">'+chips+'</div>'+head+cards;
+  var st=el.querySelector(".strip");
+  if(st){if(ss!=null&&!rc)st.scrollLeft=ss;else{var s=st.querySelector(".sel");if(s)st.scrollLeft=s.offsetLeft-(st.clientWidth-s.offsetWidth)/2}}
+  rc=false;window.scrollTo(0,y);
 }
 
 function renderPanel(){
   var p=$("#panel");
   p.innerHTML='<div style="margin-bottom:8px;color:var(--mut)">Этапы под каждой датой:</div>'+
     steps.map(function(s){return '<div class="row"><input value="'+esc(s.name)+'" data-act="stepname" data-s="'+s.id+'"><button class="x" data-act="delstep" data-s="'+s.id+'">×</button></div>'}).join("")+
-    '<button data-act="addstep">+ Этап</button>';
+    '<button data-act="addstep">+ Этап</button>'+
+    '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button data-act="export">Копия данных</button><button data-act="import">Восстановить</button></div>';
 }
 
 function arm(k){armed=k;render();setTimeout(function(){if(armed===k){armed="";render()}},3000)}
@@ -135,6 +183,8 @@ document.addEventListener("click",function(e){
   if(a==="export"){var js=JSON.stringify({niches:niches,steps:steps});(navigator.clipboard?navigator.clipboard.writeText(js):Promise.reject()).then(function(){setStatus("Копия скопирована в буфер")},function(){prompt("Скопируйте текст копии:",js)})}
   else if(a==="import"){var tx=prompt("Вставьте текст копии:");if(tx){try{var o=JSON.parse(tx);niches=o.niches||{};steps=o.steps||DEF.slice();saveLocal();render();setStatus("Восстановлено")}catch(er){setStatus("Не удалось прочитать копию")}}}
   else if(a==="addniche"){var nid=uid();niches[nid]={name:"Новая ниша",order:Date.now(),days:{}};niches[nid].days[iso(new Date())]={done:false,c:{}};render();save(nid)}
+  else if(a==="pick"){sel=d;render()}
+  else if(a==="today"){sel=iso(new Date());rc=true;render()}
   else if(a==="adddate"){ahead+=7;render()}
   else if(a==="delniche"){if(armed!=="n"+id){arm("n"+id);return}armed="";delete niches[id];render();save(id)}
   else if(a==="steps"){$("#panel").classList.toggle("on");renderPanel()}
@@ -170,6 +220,9 @@ function loadLocal(){
 }
 
 render();
+if(mob.addEventListener)mob.addEventListener("change",render);else if(mob.addListener)mob.addListener(render);
+var lastT=iso(new Date());
+document.addEventListener("visibilitychange",function(){if(!document.hidden){var t=iso(new Date());if(t!==lastT){lastT=t;sel=t;rc=true;scrolled=false;render()}}});
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});
 var tries=0;
 (async function init(){
