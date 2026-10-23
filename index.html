@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Трекер">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#2563eb">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Трекер YouTube</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#6b7280;--line:#e5e7eb;--card:#f8fafc;--acc:#2563eb;--okbg:#dcfce7;--ok:#15803d;--inp:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--fg:#e5e7eb;--mut:#9ca3af;--line:#2b303b;--card:#171a21;--acc:#60a5fa;--okbg:#14301f;--ok:#4ade80;--inp:#1d212a}}
+:root[data-theme="dark"]{--bg:#0f1115;--fg:#e5e7eb;--mut:#9ca3af;--line:#2b303b;--card:#171a21;--acc:#60a5fa;--okbg:#14301f;--ok:#4ade80;--inp:#1d212a}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+@media (max-width:640px){.wrap{padding:10px}header button{flex:1 1 auto;padding:10px 12px}input,.num,.tm,#panel input,.dh input{font-size:16px}input[type=checkbox]{width:24px;height:24px}.sc label{padding:9px 2px}.dh{min-width:135px}th.name{min-width:125px;max-width:140px}.nm{font-size:15px}.cl{padding:4px 0}}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:14px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+h1{font-size:20px;margin:0;flex:1 1 auto}
+.status{font-size:12px;color:var(--mut)}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:6px 12px;cursor:pointer}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button.x{padding:2px 8px;color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow-x:auto}
+table{border-collapse:separate;border-spacing:0;min-width:100%}
+td,th{border-right:1px solid var(--line);vertical-align:top;padding:8px}
+tr:first-child>*{border-bottom:1px solid var(--line)}
+th.name{position:sticky;left:0;background:var(--card);min-width:150px;max-width:190px;text-align:left;z-index:2}
+.nm{font-weight:600;font-size:16px;padding:4px;border-radius:6px;outline:none;margin-bottom:8px;word-break:break-word}
+.nm:focus{background:var(--inp);box-shadow:0 0 0 2px var(--acc)}
+.dh{min-width:150px;text-align:center}
+.dh input[type=date]{font:inherit;width:100%;background:var(--inp);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px}
+.cl{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;cursor:pointer}
+.pr{font-size:12px;color:var(--mut)}
+.sc label{display:flex;align-items:center;gap:8px;padding:5px 2px;cursor:pointer}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--acc);flex:none}
+.closed{background:var(--okbg)}
+.closed .pr,.closed .cl{color:var(--ok)}
+.addc{vertical-align:middle;text-align:center;min-width:90px;border-right:0}
+.num,.tm{font:inherit;background:var(--inp);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;width:100%}.num{text-align:center;margin-top:4px}.tl{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:13px;margin-bottom:8px}.tm{width:auto;flex:1}
+.dl{font-weight:600;margin-bottom:2px}.today{box-shadow:inset 0 3px 0 var(--acc)}
+.empty{color:var(--mut);text-align:center;padding:40px 0}
+#panel{display:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px}
+#panel.on{display:block}
+#panel .row{display:flex;gap:8px;margin-bottom:8px}
+#panel input{flex:1;font:inherit;background:var(--inp);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Трекер YouTube</h1>
+    <span class="status" id="status"></span>
+    <button id="bSteps" data-act="steps">Этапы</button>
+    <button data-act="export">Копия</button>
+    <button data-act="import">Восстановить</button>
+    <button class="pri" data-act="addniche">+ Ниша</button>
+  </header>
+  <div id="panel"></div>
+  <div id="list"></div>
+</div>
+<script>
+(function(){
+var DEF=[{id:"s1",name:"Сценарий"},{id:"s2",name:"Генерация"},{id:"s3",name:"Сохранение"},{id:"s4",name:"Превью"},{id:"s5",name:"YouTube"}];
+var niches={},steps=DEF.slice(),db=null,armed="",pending=false,LS="yt-tracker-v1";
+var $=function(s){return document.querySelector(s)};
+var uid=function(){return Math.random().toString(36).slice(2,9)};
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})};
+var clone=function(o){return JSON.parse(JSON.stringify(o))};
+function iso(d){return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)}
+var ahead=14,scrolled=false;
+function addDays(s,k){var d=new Date(s+"T12:00:00");d.setDate(d.getDate()+k);return iso(d)}
+function range(n){var t=iso(new Date()),ks=Object.keys(n.days||{}).sort(),a=addDays(t,-3),b=addDays(t,ahead);if(ks.length){if(ks[0]<a)a=ks[0];if(ks[ks.length-1]>b)b=ks[ks.length-1]}var r=[],c=a,g=0;while(c<=b&&g++<800){r.push(c);c=addDays(c,1)}return r}
+function day(n,d){n.days=n.days||{};return n.days[d]||(n.days[d]={done:false,c:{}})}
+function lab(d){var x=new Date(d+"T12:00:00");return["вс","пн","вт","ср","чт","пт","сб"][x.getDay()]+" "+d.slice(8)+"."+d.slice(5,7)}
+
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify({niches:niches,steps:steps}))}catch(e){}}
+function save(id){
+  if(!db){saveLocal();return}
+  var p=niches[id]?db.collection("niches").doc(id).set(clone(niches[id])):db.collection("niches").doc(id).delete();
+  p.catch(function(){setStatus("Ошибка сохранения")});
+}
+function saveSteps(){
+  if(!db){saveLocal();return}
+  db.doc("config/steps").set({list:clone(steps)}).catch(function(){setStatus("Ошибка сохранения")});
+}
+function setStatus(t){$("#status").textContent=t}
+
+function render(){
+  var ae=document.activeElement;if(ae&&(ae.isContentEditable||(ae.classList&&(ae.classList.contains("num")||ae.classList.contains("tm"))))){pending=true;return}
+  pending=false;
+  var ids=Object.keys(niches).sort(function(a,b){return niches[a].order-niches[b].order});
+  var el=$("#list"),sl=[].map.call(el.querySelectorAll(".card"),function(c){return c.scrollLeft});
+  if(!ids.length){el.innerHTML='<p class="empty">Пока нет ниш. Нажмите «+ Ниша».</p>';return}
+  el.innerHTML=ids.map(function(id){
+    var n=niches[id],days=n.days||{},ds=range(n),T=iso(new Date());
+    var heads=ds.map(function(d){
+      var x=days[d]||{done:false,c:{}},c=x.c||{},k=steps.filter(function(s){return c[s.id]}).length,a='data-n="'+id+'" data-d="'+d+'"';
+      return '<td class="dh'+(x.done?' closed':'')+(d===T?' today':'')+'"><div class="dl">'+lab(d)+(d===T?' · сегодня':'')+'</div>'+
+        '<input class="num" type="text" placeholder="№ ролика" value="'+esc(x.num||'')+'" data-act="num" '+a+'>'+
+        '<label class="cl"><input type="checkbox" data-act="close" '+a+(x.done?' checked':'')+'> день закрыт</label>'+
+        '<span class="pr">'+k+'/'+steps.length+'</span></td>';
+    }).join("");
+    var body=ds.map(function(d){
+      var x=days[d]||{done:false,c:{}},c=x.c||{};
+      return '<td class="sc'+(x.done?' closed':'')+(d===T?' today':'')+'">'+steps.map(function(s){
+        return '<label><input type="checkbox" data-act="step" data-n="'+id+'" data-d="'+d+'" data-s="'+s.id+'"'+(c[s.id]?' checked':'')+'> '+esc(s.name)+'</label>';
+      }).join("")+'</td>';
+    }).join("");
+    return '<section class="card"><table><tr><th class="name" rowspan="2"><div class="nm" contenteditable="true" spellcheck="false" data-act="rename" data-n="'+id+'">'+esc(n.name)+'</div><label class="tl">Время <input type="time" class="tm" data-act="time" data-n="'+id+'" value="'+esc(n.time||'')+'"></label>'+
+      '<button class="x" data-act="delniche" data-n="'+id+'">'+(armed==="n"+id?"Точно удалить?":"Удалить нишу")+'</button></th>'+heads+
+      '<td class="addc" rowspan="2"><button data-act="adddate" data-n="'+id+'">+7 дней</button></td></tr><tr>'+body+'</tr></table></section>';
+  }).join("");
+  [].forEach.call(el.querySelectorAll(".card"),function(c,i){if(scrolled&&sl[i]!=null)c.scrollLeft=sl[i];else{var t=c.querySelector(".dh.today");if(t)c.scrollLeft=Math.max(0,t.offsetLeft-190)}});
+  scrolled=true;
+}
+
+function renderPanel(){
+  var p=$("#panel");
+  p.innerHTML='<div style="margin-bottom:8px;color:var(--mut)">Этапы под каждой датой:</div>'+
+    steps.map(function(s){return '<div class="row"><input value="'+esc(s.name)+'" data-act="stepname" data-s="'+s.id+'"><button class="x" data-act="delstep" data-s="'+s.id+'">×</button></div>'}).join("")+
+    '<button data-act="addstep">+ Этап</button>';
+}
+
+function arm(k){armed=k;render();setTimeout(function(){if(armed===k){armed="";render()}},3000)}
+
+document.addEventListener("click",function(e){
+  var t=e.target.closest("[data-act]");if(!t)return;
+  var a=t.dataset.act,id=t.dataset.n,d=t.dataset.d;
+  if(a==="export"){var js=JSON.stringify({niches:niches,steps:steps});(navigator.clipboard?navigator.clipboard.writeText(js):Promise.reject()).then(function(){setStatus("Копия скопирована в буфер")},function(){prompt("Скопируйте текст копии:",js)})}
+  else if(a==="import"){var tx=prompt("Вставьте текст копии:");if(tx){try{var o=JSON.parse(tx);niches=o.niches||{};steps=o.steps||DEF.slice();saveLocal();render();setStatus("Восстановлено")}catch(er){setStatus("Не удалось прочитать копию")}}}
+  else if(a==="addniche"){var nid=uid();niches[nid]={name:"Новая ниша",order:Date.now(),days:{}};niches[nid].days[iso(new Date())]={done:false,c:{}};render();save(nid)}
+  else if(a==="adddate"){ahead+=7;render()}
+  else if(a==="delniche"){if(armed!=="n"+id){arm("n"+id);return}armed="";delete niches[id];render();save(id)}
+  else if(a==="steps"){$("#panel").classList.toggle("on");renderPanel()}
+  else if(a==="addstep"){steps.push({id:"s"+uid(),name:"Новый этап"});renderPanel();render();saveSteps()}
+  else if(a==="delstep"){if(steps.length<2)return;steps=steps.filter(function(s){return s.id!==t.dataset.s});renderPanel();render();saveSteps()}
+});
+
+document.addEventListener("change",function(e){
+  var t=e.target,a=t.dataset.act,id=t.dataset.n,d=t.dataset.d;
+  if(!a)return;
+  if(a==="num"){day(niches[id],d).num=t.value.trim();save(id)}
+  else if(a==="time"){niches[id].time=t.value;save(id)}
+  else if(a==="close"){day(niches[id],d).done=t.checked;render();save(id)}
+  else if(a==="step"){var x=day(niches[id],d);x.c=x.c||{};if(t.checked)x.c[t.dataset.s]=true;else delete x.c[t.dataset.s];render();save(id)}
+  else if(a==="stepname"){var s=steps.filter(function(q){return q.id===t.dataset.s})[0];if(s){s.name=t.value.trim()||s.name;render();saveSteps()}}
+});
+
+document.addEventListener("focusout",function(e){
+  var t=e.target;
+  if(t.classList&&(t.classList.contains("num")||t.classList.contains("tm")))setTimeout(function(){if(pending)render()},0);
+  if(t.dataset&&t.dataset.act==="rename"){
+    var n=niches[t.dataset.n];if(n){n.name=t.textContent.trim()||"Без названия";save(t.dataset.n)}
+    setTimeout(function(){if(pending)render()},0);
+  }
+});
+document.addEventListener("keydown",function(e){
+  if(e.key==="Enter"&&e.target.dataset&&e.target.dataset.act==="rename"){e.preventDefault();e.target.blur()}
+});
+
+function loadLocal(){
+  try{var s=JSON.parse(localStorage.getItem(LS)||"null");if(s){niches=s.niches||{};steps=s.steps||DEF.slice()}}catch(e){}
+  render();
+}
+
+render();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});
+var tries=0;
+(async function init(){
+  var m=null;
+  if(!m){setStatus("Данные хранятся на этом устройстве");loadLocal();return}
+  db=m;setStatus("Синхронизация включена");
+  db.collection("niches").onSnapshot(function(snap){
+    var o={};snap.docs.forEach(function(d){o[d.id]=clone(d.data())});niches=o;render();
+  },function(){setStatus("Нет доступа к данным");db=null;loadLocal()});
+  db.doc("config/steps").onSnapshot(function(s){
+    if(s.exists&&s.data()&&s.data().list){steps=clone(s.data().list);render();if($("#panel").classList.contains("on")&&!(document.activeElement&&document.activeElement.tagName==="INPUT"))renderPanel()}
+  },function(){});
+})();
+})();
+</script>
+</body>
+</html>
