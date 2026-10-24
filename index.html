@@ -62,6 +62,10 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--acc);flex:none}
 .mc .row input{width:26px;height:26px}
 .mc .row.done span{text-decoration:line-through;color:var(--mut)}
 .mc>.x{margin-top:6px}
+.mini{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer}
+.mini .mn{flex:1;font-weight:600;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini .pr{font-size:14px}.mini .ok{color:var(--ok);font-weight:700}
+.fold{border:0;background:none;font-size:18px;padding:4px 8px 4px 0;color:var(--mut)}
 .empty{color:var(--mut);text-align:center;padding:40px 0}
 #panel{display:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px}
 #panel.on{display:block}
@@ -154,7 +158,9 @@ function renderMobile(){
   var head='<div class="mday"><span>'+WF[sx.getDay()]+', '+parseInt(sel.slice(8),10)+' '+MN[sx.getMonth()]+'</span>'+(sel!==T?'<button data-act="today">Сегодня</button>':'')+'</div>';
   var cards=ids.length?ids.map(function(id){
     var n=niches[id],x=(n.days||{})[sel]||{done:false,c:{}},cc=x.c||{},k=steps.filter(function(s){return cc[s.id]}).length,a='data-n="'+id+'" data-d="'+sel+'"';
-    return '<section class="mc'+(x.done?' closed':'')+'"><div class="mh"><div class="nm" contenteditable="true" spellcheck="false" data-act="rename" data-n="'+id+'">'+esc(n.name)+'</div>'+
+    var col=x.col!==undefined?x.col:x.done;
+    if(col)return '<section class="mc mini'+(x.done?' closed':'')+'" data-act="fold" '+a+'><span class="fold">▸</span><span class="mn">'+esc(n.name)+'</span>'+(x.num?'<span class="pr">№'+esc(x.num)+'</span>':'')+'<span class="pr">'+k+'/'+steps.length+'</span>'+(x.done?'<span class="ok">✓</span>':'')+'</section>';
+    return '<section class="mc'+(x.done?' closed':'')+'"><div class="mh"><button class="fold" data-act="fold" '+a+'>▾</button><div class="nm" contenteditable="true" spellcheck="false" data-act="rename" data-n="'+id+'">'+esc(n.name)+'</div>'+
       '<input class="tm" type="time" data-act="time" data-n="'+id+'" value="'+esc(n.time||'')+'"></div>'+
       '<input class="num" type="text" placeholder="№ ролика" value="'+esc(x.num||'')+'" data-act="num" '+a+'>'+
       steps.map(function(s){return '<label class="row'+(cc[s.id]?' done':'')+'"><input type="checkbox" data-act="step" '+a+' data-s="'+s.id+'"'+(cc[s.id]?' checked':'')+'><span>'+esc(s.name)+'</span></label>'}).join("")+
@@ -183,6 +189,7 @@ document.addEventListener("click",function(e){
   if(a==="export"){var js=JSON.stringify({niches:niches,steps:steps});(navigator.clipboard?navigator.clipboard.writeText(js):Promise.reject()).then(function(){setStatus("Копия скопирована в буфер")},function(){prompt("Скопируйте текст копии:",js)})}
   else if(a==="import"){var tx=prompt("Вставьте текст копии:");if(tx){try{var o=JSON.parse(tx);niches=o.niches||{};steps=o.steps||DEF.slice();saveLocal();render();setStatus("Восстановлено")}catch(er){setStatus("Не удалось прочитать копию")}}}
   else if(a==="addniche"){var nid=uid();niches[nid]={name:"Новая ниша",order:Date.now(),days:{}};niches[nid].days[iso(new Date())]={done:false,c:{}};render();save(nid)}
+  else if(a==="fold"){var q=day(niches[id],d);q.col=!(q.col!==undefined?q.col:q.done);render();save(id)}
   else if(a==="pick"){sel=d;render()}
   else if(a==="today"){sel=iso(new Date());rc=true;render()}
   else if(a==="adddate"){ahead+=7;render()}
@@ -197,7 +204,7 @@ document.addEventListener("change",function(e){
   if(!a)return;
   if(a==="num"){day(niches[id],d).num=t.value.trim();save(id)}
   else if(a==="time"){niches[id].time=t.value;save(id)}
-  else if(a==="close"){day(niches[id],d).done=t.checked;render();save(id)}
+  else if(a==="close"){var q=day(niches[id],d);q.done=t.checked;delete q.col;render();save(id)}
   else if(a==="step"){var x=day(niches[id],d);x.c=x.c||{};if(t.checked)x.c[t.dataset.s]=true;else delete x.c[t.dataset.s];render();save(id)}
   else if(a==="stepname"){var s=steps.filter(function(q){return q.id===t.dataset.s})[0];if(s){s.name=t.value.trim()||s.name;render();saveSteps()}}
 });
