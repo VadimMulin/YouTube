@@ -178,7 +178,7 @@ function renderPanel(){
   p.innerHTML='<div style="margin-bottom:8px;color:var(--mut)">Этапы под каждой датой:</div>'+
     steps.map(function(s){return '<div class="row"><input value="'+esc(s.name)+'" data-act="stepname" data-s="'+s.id+'"><button class="x" data-act="delstep" data-s="'+s.id+'">×</button></div>'}).join("")+
     '<button data-act="addstep">+ Этап</button>'+
-    '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button data-act="export">Копия данных</button><button data-act="import">Восстановить</button></div>';
+    '<div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button data-act="export">Копия данных</button><button data-act="import">Восстановить</button></div><div style="margin-top:12px;color:var(--mut);font-size:12px">Версия 5</div>';
 }
 
 function arm(k){armed=k;render();setTimeout(function(){if(armed===k){armed="";render()}},3000)}
@@ -230,7 +230,10 @@ render();
 if(mob.addEventListener)mob.addEventListener("change",render);else if(mob.addListener)mob.addListener(render);
 var lastT=iso(new Date());
 document.addEventListener("visibilitychange",function(){if(!document.hidden){var t=iso(new Date());if(t!==lastT){lastT=t;sel=t;rc=true;scrolled=false;render()}}});
-if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});
+if("serviceWorker" in navigator){
+  if(navigator.serviceWorker.controller){var rl=false;navigator.serviceWorker.addEventListener("controllerchange",function(){if(!rl){rl=true;location.reload()}})}
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(function(r){r.update()}).catch(function(){});
+}
 var tries=0;
 (async function init(){
   var m=null;
